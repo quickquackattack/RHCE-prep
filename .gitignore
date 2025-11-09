@@ -1,0 +1,41 @@
+# Ansible
+*.retry
+.ansible/
+ansible/.ansible_facts/
+/tmp/ansible_facts
+
+# SSH Keys (keep private keys out of git)
+*.pem
+id_rsa
+id_dsa
+id_ecdsa
+id_ed25519
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.sublime-*
+
+# Temporary files
+tmp/
+temp/
+*.tmp

@@ -1,0 +1,11 @@
+---
+- name: Test connectivity to all lab nodes
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Ping all hosts
+      ansible.builtin.ping:
+
+    - name: Display message
+      ansible.builtin.debug:
+        msg: "Successfully connected to {{ inventory_hostname }}"

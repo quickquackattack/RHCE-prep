@@ -1,0 +1,48 @@
+---
+- name: User management playbook
+  hosts: nodes
+  become: true
+  vars:
+    users:
+      - username: developer
+        comment: "Developer User"
+        groups: wheel
+      - username: operator
+        comment: "Operations User"
+        groups: ""
+
+  tasks:
+    - name: Create user groups
+      ansible.builtin.group:
+        name: developers
+        state: present
+
+    - name: Create users
+      ansible.builtin.user:
+        name: "{{ item.username }}"
+        comment: "{{ item.comment }}"
+        groups: "{{ item.groups }}"
+        append: true
+        shell: /bin/bash
+        create_home: true
+        state: present
+      loop: "{{ users }}"
+
+    - name: Set up SSH directory for users
+      ansible.builtin.file:
+        path: "/home/{{ item.username }}/.ssh"
+        state: directory
+        owner: "{{ item.username }}"
+        group: "{{ item.username }}"
+        mode: '0700'
+      loop: "{{ users }}"
+
+    - name: Deploy SSH authorized keys
+      ansible.builtin.copy:
+        dest: "/home/{{ item.username }}/.ssh/authorized_keys"
+        content: "# Add SSH public keys here"
+        owner: "{{ item.username }}"
+        group: "{{ item.username }}"
+        mode: '0600'
+        force: false
+      loop: "{{ users }}"

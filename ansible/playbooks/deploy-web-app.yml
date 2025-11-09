@@ -1,0 +1,83 @@
+---
+- name: Deploy simple web application
+  hosts: web
+  become: true
+  vars:
+    web_root: /var/www/html
+    app_port: 80
+
+  tasks:
+    - name: Ensure httpd is installed
+      ansible.builtin.dnf:
+        name: httpd
+        state: present
+
+    - name: Create web application directory
+      ansible.builtin.file:
+        path: "{{ web_root }}/app"
+        state: directory
+        owner: apache
+        group: apache
+        mode: '0755'
+
+    - name: Deploy index page
+      ansible.builtin.copy:
+        dest: "{{ web_root }}/index.html"
+        content: |
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <title>{{ inventory_hostname }}</title>
+              <style>
+                  body {
+                      font-family: Arial, sans-serif;
+                      margin: 40px;
+                      background-color: #f0f0f0;
+                  }
+                  .container {
+                      background-color: white;
+                      padding: 20px;
+                      border-radius: 8px;
+                      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                  }
+                  h1 { color: #333; }
+                  .info { color: #666; }
+              </style>
+          </head>
+          <body>
+              <div class="container">
+                  <h1>Welcome to {{ inventory_hostname }}</h1>
+                  <p class="info">This is an Ansible-managed web server</p>
+                  <p class="info">Server IP: {{ ansible_default_ipv4.address }}</p>
+                  <p class="info">Managed by: Ansible Automation Platform</p>
+              </div>
+          </body>
+          </html>
+        owner: apache
+        group: apache
+        mode: '0644'
+
+    - name: Start and enable httpd
+      ansible.builtin.systemd:
+        name: httpd
+        state: started
+        enabled: true
+
+    - name: Configure firewall
+      ansible.posix.firewalld:
+        service: "{{ item }}"
+        permanent: true
+        state: enabled
+        immediate: true
+      loop:
+        - http
+        - https
+
+    - name: Verify httpd is running
+      ansible.builtin.uri:
+        url: "http://{{ ansible_default_ipv4.address }}"
+        status_code: 200
+      register: result
+      retries: 3
+      delay: 2
+      until: result.status == 200

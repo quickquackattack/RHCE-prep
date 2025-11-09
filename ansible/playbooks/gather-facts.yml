@@ -1,0 +1,14 @@
+---
+- name: Gather and display facts from lab nodes
+  hosts: all
+  tasks:
+    - name: Display OS information
+      ansible.builtin.debug:
+        msg: |
+          Hostname: {{ ansible_hostname }}
+          OS: {{ ansible_distribution }} {{ ansible_distribution_version }}
+          Kernel: {{ ansible_kernel }}
+          Architecture: {{ ansible_architecture }}
+          CPU Cores: {{ ansible_processor_vcpus }}
+          Memory: {{ ansible_memtotal_mb }} MB
+          IP Address: {{ ansible_default_ipv4.address }}

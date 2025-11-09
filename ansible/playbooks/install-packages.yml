@@ -1,0 +1,73 @@
+---
+- name: Install common packages across all nodes
+  hosts: nodes
+  become: true
+  tasks:
+    - name: Update all packages
+      ansible.builtin.dnf:
+        name: "*"
+        state: latest
+        update_cache: true
+
+    - name: Install common development tools
+      ansible.builtin.dnf:
+        name:
+          - vim
+          - git
+          - wget
+          - curl
+          - net-tools
+          - bind-utils
+          - tar
+          - unzip
+        state: present
+
+    - name: Install web server packages on web nodes
+      ansible.builtin.dnf:
+        name:
+          - httpd
+          - mod_ssl
+        state: present
+      when: inventory_hostname in groups['web']
+
+    - name: Install database packages on db nodes
+      ansible.builtin.dnf:
+        name:
+          - mariadb-server
+          - mariadb
+          - python3-PyMySQL
+        state: present
+      when: inventory_hostname in groups['db']
+
+    - name: Start and enable httpd on web nodes
+      ansible.builtin.systemd:
+        name: httpd
+        state: started
+        enabled: true
+      when: inventory_hostname in groups['web']
+
+    - name: Configure firewall for web servers
+      ansible.posix.firewalld:
+        service: "{{ item }}"
+        permanent: true
+        state: enabled
+        immediate: true
+      loop:
+        - http
+        - https
+      when: inventory_hostname in groups['web']
+
+    - name: Start and enable mariadb on db nodes
+      ansible.builtin.systemd:
+        name: mariadb
+        state: started
+        enabled: true
+      when: inventory_hostname in groups['db']
+
+    - name: Configure firewall for database servers
+      ansible.posix.firewalld:
+        service: mysql
+        permanent: true
+        state: enabled
+        immediate: true
+      when: inventory_hostname in groups['db']
