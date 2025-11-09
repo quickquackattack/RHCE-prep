@@ -1,4 +1,121 @@
-# Ansible Lab Environment with Libvirt
+# Automated VM Provisioning System for Security Engineering
+
+A comprehensive libvirt-based VM provisioning system with two modes:
+
+1. **Jira-Integrated Automated Provisioning** - Request VMs via Jira tickets with automatic provisioning
+2. **Manual Ansible Lab** - Pre-configured 5-VM lab environment for Ansible practice
+
+## Features
+
+- 🎫 **Jira Integration** - Request VMs via Jira tickets
+- ⚡ **Automated Provisioning** - Fully automated VM creation and configuration
+- 🛠️ **Security Tools** - Pre-configured with 30+ security tools (Metasploit, Nmap, Wireshark, etc.)
+- 🔒 **Network Isolation** - Optional isolated networks for security testing
+- ⏰ **Auto-Cleanup** - Automatic VM destruction after configurable time
+- 🧪 **Test-Driven** - Comprehensive test suite with mock Jira support
+- 📊 **Status Tracking** - Real-time status updates in Jira tickets
+
+---
+
+## Mode 1: Jira-Integrated VM Provisioning
+
+Automated VM provisioning for security engineering testing via Jira tickets.
+
+### Quick Start (Jira Mode)
+
+**For Users (Requesting VMs):**
+See [USER_GUIDE.md](USER_GUIDE.md) for complete instructions.
+
+Create a Jira ticket:
+```
+Summary: Security Testing VM
+
+Description:
+VM Name: security-test-001
+CPU Cores: 4
+RAM (MB): 8192
+Disk Size (GB): 40
+Software List:
+- metasploit
+- nmap
+- wireshark
+- docker
+Network Isolated: yes
+Auto Destroy (hours): 24
+
+Labels: vm-provisioning-request
+```
+
+Wait ~5-10 minutes, get VM access from ticket comments!
+
+**For Admins (Setting Up):**
+See [SETUP_GUIDE.md](SETUP_GUIDE.md) for complete setup instructions.
+
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Configure
+cp config/jira-provisioner.env.example config/jira-provisioner.env
+vi config/jira-provisioner.env
+
+# Test
+bash scripts/test-with-jira.sh
+
+# Deploy
+python3 jira-provisioner.py --mode webhook
+```
+
+### Architecture
+
+```
+Jira Ticket → Webhook → Provisioner → Libvirt VMs → Ansible → Status Update
+```
+
+- **Webhook Server** - Receives Jira webhooks and queues provisioning
+- **VM Provisioner** - Creates VMs with specified resources
+- **Software Installer** - Installs requested security tools via Ansible
+- **Status Reporter** - Updates Jira with progress and access info
+
+### Available Software (30+ Security Tools)
+
+**Scanning:** nmap, masscan, nikto
+**Exploitation:** metasploit, sqlmap, burpsuite
+**Network:** wireshark, tcpdump, netcat
+**Forensics:** volatility, autopsy
+**Containers:** docker, podman, kubernetes
+**Development:** python3, golang, nodejs
+**Databases:** postgresql, mysql, mariadb, redis
+**Web Servers:** apache, nginx
+**Password Cracking:** john, hashcat, aircrack-ng
+
+See [USER_GUIDE.md](USER_GUIDE.md) for complete list.
+
+### Testing
+
+```bash
+# Run all tests
+bash scripts/run-tests.sh
+
+# Interactive testing
+bash scripts/test-with-jira.sh
+
+# Unit tests
+pytest tests/ -v
+
+# Integration tests
+pytest tests/test_integration.py -v
+```
+
+### Documentation
+
+- **[USER_GUIDE.md](USER_GUIDE.md)** - For users requesting VMs
+- **[SETUP_GUIDE.md](SETUP_GUIDE.md)** - For admins setting up the system
+- **[JIRA_INTEGRATION.md](JIRA_INTEGRATION.md)** - Technical architecture details
+
+---
+
+## Mode 2: Manual Ansible Lab Environment
 
 A complete 5-VM lab environment for practicing Ansible automation, built on libvirt/KVM using CentOS Stream 9 cloud images.
 
