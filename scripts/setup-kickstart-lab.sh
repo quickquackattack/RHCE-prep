@@ -164,8 +164,8 @@ volgroup vg_main pv.01
 logvol / --fstype=xfs --name=lv_root --vgname=vg_main --size=8192 --grow
 logvol swap --fstype=swap --name=lv_swap --vgname=vg_main --size=1024
 
-# Reboot after installation
-reboot
+# Shutdown after installation (will be started manually)
+poweroff
 
 # Package selection
 %packages
@@ -254,7 +254,9 @@ for vm_name in "${!VMS_CONFIG[@]}"; do
         --extra-args "inst.ks=file:/${vm_name}-ks.cfg console=ttyS0" \
         --graphics none \
         --console pty,target_type=serial \
-        --noautoconsole &
+        --noautoconsole \
+        --wait=-1 \
+        --noreboot &
 
     # Small delay between VM starts
     sleep 2
@@ -266,7 +268,8 @@ echo -e "${YELLOW}Or watch a specific VM: virsh console <vm-name>${NC}"
 echo -e "${YELLOW}Press Ctrl+] to exit console${NC}\n"
 
 # Wait for installations to complete
-echo -e "${YELLOW}Waiting for installations to complete (this takes 10-15 minutes)...${NC}\n"
+echo -e "${YELLOW}Waiting for installations to complete (this takes 10-15 minutes)...${NC}"
+echo -e "${YELLOW}VMs will power off when installation is complete.${NC}\n"
 
 ALL_DONE=false
 TIMEOUT=1200  # 20 minutes timeout
@@ -279,11 +282,8 @@ while [ "$ALL_DONE" = false ] && [ $ELAPSED -lt $TIMEOUT ]; do
         if virsh dominfo "$vm_name" &> /dev/null; then
             STATE=$(virsh domstate "$vm_name" 2>/dev/null || echo "unknown")
 
-            # If still running, installation not done
+            # If still running, installation not done (will power off when complete)
             if [ "$STATE" = "running" ]; then
-                # Check if it's actually installed or still installing
-                # After kickstart finishes, VM reboots and should be in running state
-                # We'll wait until all are either shut off or running for a while
                 ALL_DONE=false
             fi
         else
@@ -292,7 +292,8 @@ while [ "$ALL_DONE" = false ] && [ $ELAPSED -lt $TIMEOUT ]; do
     done
 
     if [ "$ALL_DONE" = false ]; then
-        echo -ne "\rWaiting... ${ELAPSED}s / ${TIMEOUT}s  "
+        RUNNING=$(virsh list --state-running --name 2>/dev/null | grep -E 'control|node' | wc -l)
+        echo -ne "\rWaiting for installations... ${ELAPSED}s / ${TIMEOUT}s (${RUNNING} VMs still installing)  "
         sleep 10
         ELAPSED=$((ELAPSED + 10))
     fi
@@ -300,21 +301,32 @@ done
 
 echo ""
 
-# Give extra time for VMs to fully boot after installation
-echo -e "${YELLOW}Waiting extra 60 seconds for VMs to fully boot...${NC}"
-sleep 60
+if [ $ELAPSED -ge $TIMEOUT ]; then
+    echo -e "${YELLOW}⚠ Timeout reached. Some VMs may still be installing.${NC}"
+    echo -e "${YELLOW}Check status with: virsh list --all${NC}\n"
+else
+    echo -e "${GREEN}✓ All installations complete!${NC}\n"
+fi
 
-# Start any shut off VMs
+# Start all VMs
+echo -e "${YELLOW}Starting all VMs...${NC}\n"
+
 for vm_name in "${!VMS_CONFIG[@]}"; do
-    STATE=$(virsh domstate "$vm_name" 2>/dev/null || echo "shut off")
-    if [ "$STATE" = "shut off" ]; then
-        echo "Starting $vm_name..."
-        virsh start "$vm_name"
+    if virsh dominfo "$vm_name" &> /dev/null; then
+        STATE=$(virsh domstate "$vm_name" 2>/dev/null || echo "shut off")
+        if [ "$STATE" = "shut off" ]; then
+            echo "Starting $vm_name..."
+            virsh start "$vm_name"
+        else
+            echo "$vm_name is already running"
+        fi
+    else
+        echo -e "${RED}⚠ $vm_name was not created properly${NC}"
     fi
 done
 
-# Wait for boot
-sleep 30
+echo -e "\n${YELLOW}Waiting 60 seconds for VMs to boot...${NC}"
+sleep 60
 
 # Step 7: Verify SSH access
 echo -e "\n${YELLOW}Step 7: Verifying SSH access...${NC}\n"
